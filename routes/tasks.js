@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const validator = require('validator');
 const { db } = require('../db/database');
 const { verifyPin } = require('../middleware/auth');
 
@@ -30,9 +31,18 @@ router.get('/tasks', (req, res, next) => {
 // verifyPin middleware removed from this route
 router.post('/tasks', (req, res, next) => {
   const { name } = req.body;
-  if (!name || name.trim() === '') {
-    return res.status(400).json({ message: 'Task name cannot be empty' });
+
+  // --- Input Validation ---
+  if (!name || typeof name !== 'string' || validator.isEmpty(name.trim())) {
+    return res.status(400).json({ message: 'Task name is required and cannot be empty.' });
   }
+  if (!validator.isLength(name.trim(), { min: 1, max: 255 })) {
+    return res.status(400).json({ message: 'Task name must be between 1 and 255 characters.' });
+  }
+  // Basic sanitization (escape potentially harmful HTML characters)
+  const sanitizedName = validator.escape(name.trim());
+  // --- End Input Validation ---
+
 
   // Determine the next task_order value
   const findMaxOrderSql = `SELECT MAX(task_order) as max_order FROM tasks`;
@@ -45,9 +55,9 @@ router.post('/tasks', (req, res, next) => {
     // If table is empty or max_order is NULL, start at 1, otherwise increment max
     const nextOrder = (row && row.max_order !== null) ? row.max_order + 1 : 1;
 
-    // Insert the new task with the calculated order
+    // Insert the new task with the calculated order using the sanitized name
     const insertSql = `INSERT INTO tasks (name, task_order, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`;
-    const params = [name.trim(), nextOrder];
+    const params = [sanitizedName, nextOrder]; // Use sanitizedName
 
     db.run(insertSql, params, function(err) {
       if (err) {
@@ -59,7 +69,7 @@ router.post('/tasks', (req, res, next) => {
         message: 'Task created successfully',
         task: {
           id: this.lastID,
-          name: name.trim(),
+          name: sanitizedName,
           completed: false,
           task_order: nextOrder,
         }
@@ -74,16 +84,24 @@ router.post('/tasks', (req, res, next) => {
  */
 router.get('/tasks/:id', (req, res, next) => {
   const { id } = req.params;
+
+  // --- Input Validation ---
+  if (!id || !validator.isInt(id, { min: 1 })) {
+    return res.status(400).json({ message: 'Invalid Task ID provided.' });
+  }
+  const taskId = parseInt(id, 10);
+  // --- End Input Validation ---
+
   const sql = "SELECT * FROM tasks WHERE id = ?";
-   db.get(sql, [id], (err, row) => {
+   db.get(sql, [taskId], (err, row) => {
     if (err) {
-      console.error(`Error fetching task ${id}:`, err.message);
+      console.error(`Error fetching task ${taskId}:`, err.message);
       return next(err);
     }
     if (row) {
       res.json({ task: row });
     } else {
-      res.status(404).json({ message: `Task with id ${id} not found` });
+      res.status(404).json({ message: `Task with id ${taskId} not found` });
     }
   });
 });
@@ -98,6 +116,13 @@ router.put('/tasks/:id', (req, res, next) => {
   const { id } = req.params;
   const { name, completed, task_order } = req.body;
 
+  // --- Input Validation ---
+  // Validate ID from params
+  if (!id || !validator.isInt(id, { min: 1 })) {
+    return res.status(400).json({ message: 'Invalid Task ID provided.' });
+  }
+  const taskId = parseInt(id, 10);
+
   // Validate that at least one field to update is provided
   if (typeof completed === 'undefined' && typeof name === 'undefined' && typeof task_order === 'undefined') {
       return res.status(400).json({ message: 'No update fields provided (name, completed, or task_order)' });
@@ -107,9 +132,13 @@ router.put('/tasks/:id', (req, res, next) => {
   let sql = 'UPDATE tasks SET ';
   const params = [];
   const updates = [];
+  let sanitizedName = null;
 
-  // Add fields to the update query if they exist in the request body
+  // Add fields to the update query if they exist in the request body, with validation
   if (typeof completed !== 'undefined') {
+      if (typeof completed !== 'boolean') {
+          return res.status(400).json({ message: 'Invalid value for completed status (must be true or false).' });
+      }
       const isCompleted = completed ? 1 : 0;
       updates.push('completed = ?');
       params.push(isCompleted);
@@ -121,48 +150,61 @@ router.put('/tasks/:id', (req, res, next) => {
       // The user can manually reorder it if desired via drag-and-drop.
   }
   if (typeof name !== 'undefined') {
-      if (name.trim() === '') return res.status(400).json({ message: 'Task name cannot be empty' });
+      if (typeof name !== 'string' || validator.isEmpty(name.trim())) {
+          return res.status(400).json({ message: 'Task name cannot be empty.' });
+      }
+      if (!validator.isLength(name.trim(), { min: 1, max: 255 })) {
+          return res.status(400).json({ message: 'Task name must be between 1 and 255 characters.' });
+      }
+      sanitizedName = validator.escape(name.trim());
       updates.push('name = ?');
-      params.push(name.trim());
+      params.push(sanitizedName);
   }
    if (typeof task_order !== 'undefined') {
-      if (typeof task_order !== 'number' || !Number.isInteger(task_order) || task_order < 1) {
-          return res.status(400).json({ message: 'task_order must be a positive integer' });
+      // Allow null for task_order if explicitly provided (e.g., if un-completing and setting order)
+      // But if not null, validate it's a positive integer
+      if (task_order !== null && (typeof task_order !== 'number' || !validator.isInt(String(task_order), { min: 1 }))) {
+          return res.status(400).json({ message: 'task_order must be null or a positive integer.' });
       }
       updates.push('task_order = ?');
       params.push(task_order);
   }
+  // --- End Input Validation ---
 
   // Always update the 'updated_at' timestamp
   updates.push('updated_at = CURRENT_TIMESTAMP');
 
-  // Join the update parts and add the WHERE clause
+  // Join the update parts and add the WHERE clause using the validated taskId
   sql += updates.join(', ');
   sql += ' WHERE id = ?';
-  params.push(id);
+  params.push(taskId);
 
   db.run(sql, params, function(err) {
     if (err) {
-      console.error(`Error updating task ${id}:`, err.message);
+      console.error(`Error updating task ${taskId}:`, err.message);
       return next(err);
     }
     // Check if any row was actually updated
     if (this.changes === 0) {
-        return res.status(404).json({ message: `Task with id ${id} not found or no changes made` });
+        return res.status(404).json({ message: `Task with id ${taskId} not found or no changes made` });
     }
     // Fetch the updated task data to return in the response
     const fetchSql = "SELECT * FROM tasks WHERE id = ?";
-    db.get(fetchSql, [id], (err, row) => {
+    db.get(fetchSql, [taskId], (err, row) => {
         if (err) {
-            console.error(`Error fetching updated task ${id}:`, err.message);
+            console.error(`Error fetching updated task ${taskId}:`, err.message);
             // The update likely succeeded, but fetching failed. Log and inform the user.
-            return res.status(200).json({ message: `Task ${id} updated, but failed to fetch the updated record.` });
+            return res.status(200).json({ message: `Task ${taskId} updated, but failed to fetch the updated record.` });
         }
          if (!row) {
              // Should not happen if this.changes > 0
-             return res.status(404).json({ message: `Task with id ${id} not found after update attempt.` });
+             return res.status(404).json({ message: `Task with id ${taskId} not found after update attempt.` });
          }
-        res.json({ message: `Task ${id} updated successfully`, task: row });
+        // Ensure the returned name is the sanitized one if it was updated
+        if (sanitizedName !== null) {
+            row.name = sanitizedName;
+        }
+        res.json({ message: `Task ${taskId} updated successfully`, task: row });
     });
   });
 });
@@ -173,18 +215,26 @@ router.put('/tasks/:id', (req, res, next) => {
  */
 router.delete('/tasks/:id', (req, res, next) => {
   const { id } = req.params;
+
+  // --- Input Validation ---
+  if (!id || !validator.isInt(id, { min: 1 })) {
+    return res.status(400).json({ message: 'Invalid Task ID provided.' });
+  }
+  const taskId = parseInt(id, 10);
+  // --- End Input Validation ---
+
   const sql = 'DELETE FROM tasks WHERE id = ?';
 
-  db.run(sql, [id], function(err) {
+  db.run(sql, [taskId], function(err) {
     if (err) {
-      console.error(`Error deleting task ${id}:`, err.message);
+      console.error(`Error deleting task ${taskId}:`, err.message);
       return next(err);
     }
     // Check if a row was actually deleted
     if (this.changes === 0) {
-        return res.status(404).json({ message: `Task with id ${id} not found` });
+        return res.status(404).json({ message: `Task with id ${taskId} not found` });
     }
-    res.status(200).json({ message: `Task ${id} deleted successfully` });
+    res.status(200).json({ message: `Task ${taskId} deleted successfully` });
   });
 });
 
@@ -230,11 +280,24 @@ router.get('/history', (req, res, next) => {
  * Uses a database transaction to ensure all updates succeed or fail together.
  */
 router.post('/tasks/order', (req, res, next) => {
-  const { taskOrder } = req.body; // Expecting an array of task IDs, e.g., [3, 1, 2]
+  const { taskOrder } = req.body;
 
-  if (!Array.isArray(taskOrder)) {
-     return res.status(400).json({ message: 'taskIds must be an array of task IDs' });
+  // --- Input Validation ---
+  if (!taskOrder || !Array.isArray(taskOrder)) {
+     return res.status(400).json({ message: 'taskOrder must be provided as an array of task IDs.' });
   }
+
+  // Validate each ID in the array
+  const validatedTaskIds = [];
+  for (const id of taskOrder) {
+    // Ensure it's a number and a positive integer
+    if (typeof validator.toInt(id) !== 'number' || !validator.isInt(String(id), { min: 1 })) {
+      return res.status(400).json({ message: `Invalid Task ID found in taskOrder array: ${id}. All IDs must be positive integers.` });
+    }
+    validatedTaskIds.push(id);
+  }
+  // --- End Input Validation ---
+
 
   // Filter out any potential IDs that might correspond to completed tasks (precautionary)
   // The main logic relies on the WHERE clause in the UPDATE statement.
@@ -248,8 +311,8 @@ router.post('/tasks/order', (req, res, next) => {
         let transactionError = null;
         const successfullyOrderedIds = []; // Keep track of IDs whose order was set
 
-        // Create an array of Promises, one for each task order update
-        const updatePromises = taskOrder.map((taskId, index) => {
+        // Create an array of Promises, one for each task order update using validatedTaskIds
+        const updatePromises = validatedTaskIds.map((taskId, index) => {
             return new Promise((resolve, reject) => {
                 const order = index + 1;
                 // IMPORTANT: Only update tasks where task_order is NOT NULL (i.e., not completed)
