@@ -520,6 +520,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Load data specifically for the activated tab
       if (targetTabId === 'tasks') {
           loadTasks();
+          loadTasks().then(() => {
+              applyFilter(); // Re-apply filter after loading tasks
+          });
       } else if (targetTabId === 'timeline') {
           loadTimelineData();
       }
