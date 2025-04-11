@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFilter = 'active';
   let currentPinAction = null;
   let sortableInstance = null;
+  let verifiedPin = null;
 
   const API_BASE_URL = '/api';
 
@@ -78,6 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateUiLockState = (isLocked) => {
       bodyElement.classList.toggle('locked', isLocked);
       editLockButton.classList.toggle('unlocked', !isLocked);
+
+      // Clear verified PIN when locking
+      if (isLocked) {
+          verifiedPin = null;
+      }
 
       // Enable/Disable Drag and Drop
       if (sortableInstance) {
@@ -326,11 +332,13 @@ document.addEventListener('DOMContentLoaded', () => {
           });
 
           if (response.ok) {
-              // PIN is correct, unlock the UI by removing the class
+              // PIN is correct, store it and unlock the UI
+              verifiedPin = pin; // Store the verified PIN
               updateUiLockState(false); // false means unlock (removes body.locked)
               closePinModal(); // Close the modal on success
           } else if (response.status === 401 || response.status === 403) {
               // PIN is incorrect
+              verifiedPin = null; // Ensure PIN is cleared on failure
               const errorResult = await response.json();
               pinError.textContent = errorResult.message || 'Invalid PIN.';
               pinError.style.display = 'block';
@@ -355,10 +363,18 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {string} name - The name of the task to create.
    */
   const createTask = async (name) => {
+      if (!verifiedPin) {
+          console.error("Attempted to create task without a verified PIN.");
+          alert("PIN not verified. Please unlock editing.");
+          return;
+      }
       try {
           const response = await fetch(`${API_BASE_URL}/tasks`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-Pin': verifiedPin
+              },
               body: JSON.stringify({ name }),
           });
           if (response.ok) {
@@ -388,10 +404,22 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {string} [originalText] - Optional: The original text of the span, for reverting on error.
    */
   const updateTask = async (taskId, updates, spanElement = null, originalText = null) => {
+       if (!verifiedPin) {
+           console.error("Attempted to update task without a verified PIN.");
+           alert("PIN not verified. Please unlock editing.");
+           // Revert optimistic UI update if applicable
+           if (spanElement && originalText !== null) {
+               spanElement.textContent = originalText;
+           }
+           return;
+       }
       try {
           const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-Pin': verifiedPin
+              },
               body: JSON.stringify(updates),
           });
           if (!response.ok) {
@@ -426,10 +454,19 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
       }
 
+      if (!verifiedPin) {
+          console.error("Attempted to delete task without a verified PIN.");
+          alert("PIN not verified. Please unlock editing.");
+          return;
+      }
+
       try {
           // Make DELETE request to the backend
           const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
               method: 'DELETE',
+              headers: {
+                  'X-Pin': verifiedPin
+              }
           });
 
           if (!response.ok) {
@@ -462,12 +499,24 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {boolean} isCompleted - The new completion status (true or false).
    */
   const toggleTaskComplete = async (taskId, isCompleted) => {
+      // Check lock state first
+      if (!verifiedPin) {
+          console.error("Attempted to toggle task completion without a verified PIN.");
+          // Revert checkbox optimistically
+          const taskItem = taskList.querySelector(`li[data-task-id="${taskId}"]`);
+          const checkbox = taskItem?.querySelector('input[type="checkbox"]');
+          if (checkbox) checkbox.checked = !isCompleted;
+          alert("PIN not verified. Please unlock editing to modify tasks.");
+          return;
+      }
+
       try {
-          // Make PUT request, only sending the 'completed' field
+          // Make PUT request, sending 'completed' field and PIN header
           const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
               method: 'PUT',
               headers: {
                   'Content-Type': 'application/json',
+                  'X-Pin': verifiedPin
               },
               body: JSON.stringify({ completed: isCompleted }),
           });
@@ -519,7 +568,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Load data specifically for the activated tab
       if (targetTabId === 'tasks') {
-          loadTasks();
           loadTasks().then(() => {
               applyFilter(); // Re-apply filter after loading tasks
           });
@@ -744,17 +792,27 @@ document.addEventListener('DOMContentLoaded', () => {
       if (bodyElement.classList.contains('locked')) {
           console.warn('Attempted to save task order while locked. Reverting.');
           loadTasks(); // Revert visual order by reloading
-          return;
-      }
+           return;
+       }
 
-      console.log('Attempting to save new task order:', orderedTaskIds);
-      try {
-          const response = await fetch(`${API_BASE_URL}/tasks/order`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ taskOrder: orderedTaskIds }),
-          });
-          if (!response.ok) {
+       if (!verifiedPin) {
+           console.error("Attempted to save task order without a verified PIN.");
+           alert("PIN not verified. Please unlock editing.");
+           loadTasks(); // Revert visual order
+           return;
+       }
+
+       console.log('Attempting to save new task order:', orderedTaskIds);
+       try {
+           const response = await fetch(`${API_BASE_URL}/tasks/order`, {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+                   'X-Pin': verifiedPin
+               },
+               body: JSON.stringify({ taskOrder: orderedTaskIds }),
+           });
+           if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
           }
           const result = await response.json();

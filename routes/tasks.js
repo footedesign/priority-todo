@@ -28,8 +28,7 @@ router.get('/tasks', (req, res, next) => {
  * Creates a new task. PIN verification is handled by the frontend's edit lock state.
  * It calculates the next available task_order and inserts the new task.
  */
-// verifyPin middleware removed from this route
-router.post('/tasks', (req, res, next) => {
+router.post('/tasks', verifyPin, (req, res, next) => {
   const { name } = req.body;
 
   // --- Input Validation ---
@@ -111,8 +110,7 @@ router.get('/tasks/:id', (req, res, next) => {
  * Updates an existing task (name, completed status, or task_order).
  * PIN verification is handled by the frontend's edit lock state.
  */
-// verifyPin middleware logic removed from this route
-router.put('/tasks/:id', (req, res, next) => {
+router.put('/tasks/:id', verifyPin, (req, res, next) => {
   const { id } = req.params;
   const { name, completed, task_order } = req.body;
 
@@ -213,7 +211,7 @@ router.put('/tasks/:id', (req, res, next) => {
  * DELETE /api/tasks/:id
  * Deletes a specific task by its ID.
  */
-router.delete('/tasks/:id', (req, res, next) => {
+router.delete('/tasks/:id', verifyPin, (req, res, next) => {
   const { id } = req.params;
 
   // --- Input Validation ---
@@ -279,7 +277,7 @@ router.get('/history', (req, res, next) => {
  * Also saves a snapshot of the new order to the task_order_history table.
  * Uses a database transaction to ensure all updates succeed or fail together.
  */
-router.post('/tasks/order', (req, res, next) => {
+router.post('/tasks/order', verifyPin, (req, res, next) => {
   const { taskOrder } = req.body;
 
   // --- Input Validation ---
