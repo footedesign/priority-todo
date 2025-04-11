@@ -1,0 +1,16 @@
+{
+  "name": "priority-todo",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "footedesign",
+  "license": "AGPL-3.0-only",
+  "description": "A simple todo app with priority tracking over time.",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "sqlite3": "^5.1.7"
+  }
+}

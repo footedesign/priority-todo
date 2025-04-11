@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+require('dotenv').config();
+
+const express = require('express');
+const path = require('path');
+const db = require('./db/database');
+const taskRoutes = require('./routes/tasks');
+
+// --- App Initialization ---
+const app = express();
+const PORT = process.env.PORT || 4444;
+
+// --- Middleware ---
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// --- API Routes ---
+app.use('/api', taskRoutes);
+
+// --- Basic Error Handling Middleware ---
+app.use((err, req, res, next) => {
+  console.error("Error occurred:", err.stack);
+  res.status(500).json({ error: 'Something went wrong on the server!' });
+});
+
+// --- Database Initialization and Server Start ---
+db.initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });

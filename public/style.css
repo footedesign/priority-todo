@@ -1,0 +1,346 @@
+:root {
+  color-scheme: light dark;
+
+  --light-bg: #FFFFFF;
+  --light-text: #37352F;
+  --light-placeholder: #9A9A97;
+  --light-border: #DFDFDE;
+  --light-input-color: #9A9A97;
+  --light-input-border: #DFDFDE;
+  --light-input-bg: rgba(239, 239, 239, 0.3);
+  --light-input-bg-hover: #F4F4F4;
+  --light-warning: #EB5757;
+  --light-warning-hover: #C0392B;
+
+  --dark-bg: #191919;
+  --dark-text: #D4D4D4;
+  --dark-placeholder: #9A9A97;
+  --dark-border: #373737;
+  --dark-input-color: #5A5A5A;
+  --dark-input-border: #373737;
+  --dark-input-bg: rgba(59, 59, 59, 0.3);
+  --dark-input-bg-hover: #2A2A2A;
+  --dark-warning: #EB5757;
+  --dark-warning-hover: #C0392B;
+}
+
+/* --- General Body and Typography --- */
+body {
+  font-family: sans-serif;
+  line-height: 1.6;
+  margin: 20px;
+  background-color: light-dark(var(--light-bg), var(--dark-bg));
+}
+
+/* Center headings */
+h1, h2 {
+  text-align: center;
+  color: light-dark(var(--light-text), var(--dark-text));
+}
+
+/* --- Main Application Container --- */
+.app-container {
+  max-width: 700px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+/* --- Tab Navigation Styling --- */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid light-dark(var(--light-border), var(--dark-border));
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1em;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  transition: border-bottom-color 0.2s;
+
+  &:hover {
+    background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+  }
+
+  &.active {
+    border-bottom-color: light-dark(var(--light-border), var(--dark-border));
+    background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+    font-weight: bold;
+  }
+}
+
+
+/* --- Tab Content Styling --- */
+.tab-content {
+  display: none;
+
+  &.active {
+    display: block;
+  }
+}
+
+
+/* --- Tasks Tab Specific Styling --- */
+
+/* Container for the 'Add Task' input and button */
+.add-task-container {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+/* Input field for new tasks */
+#new-task-input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid light-dark(var(--light-input-border), var(--dark-input-border));
+}
+
+/* 'Add Task' button */
+#add-task-button {
+  padding: 10px 15px;
+  background-color: light-dark(var(--light-input-bg), var(--dark-input-bg));
+  color: light-dark(var(--light-text), var(--dark-text));
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+  }
+}
+
+
+/* Task List Styling */
+.task-list-container {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid light-dark(var(--light-border), var(--dark-border));
+    cursor: grab;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .placeholder {
+      color: light-dark(var(--light-placeholder), var(--dark-placeholder));
+      font-style: italic;
+      cursor: default;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 10px;
+      width: 16px;
+      height: 16px;
+      border-color: light-dark(var(--light-border), var(--dark-border));
+      border-width: 3px;
+      cursor: pointer;
+    }
+
+    .task-name {
+      flex-grow: 1;
+      margin-right: 10px;
+      cursor: text;
+    }
+    &.completed .task-name {
+      text-decoration: line-through;
+      color: #888;
+    }
+
+    .delete-button {
+      background-color: light-dark(var(--light-warning), var(--dark-warning));
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 0.8em;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
+
+      &:hover {
+        background: light-dark(var(--light-warning-hover), var(--dark-warning-hover));
+      }
+    }
+  }
+}
+
+.drag-handle {
+  line-height: initial;
+}
+
+/* --- Edit Button --- */
+.edit-lock-container {
+  margin-left: auto;
+}
+#edit-lock-button {
+  background-color: light-dark(var(--light-input-bg), var(--dark-input-bg));
+  color: light-dark(var(--light-text), var(--dark-text));
+  padding: 5px 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+  }
+
+  &.unlocked {
+    background-color: light-dark(var(--light-warning), var(--dark-warning));
+    color: white;
+  }
+}
+
+/* --- Drag and Drop Styling --- */
+/* Style applied by SortableJS to the item being dragged */
+.task-list-container li.dragging {
+  opacity: 0.5;
+  background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+}
+
+/* Filter Controls */
+.filter-controls {
+  margin-top: 20px;
+  text-align: center;
+  padding: 10px;
+  border-top: 1px solid light-dark(var(--light-border), var(--dark-border));
+
+  span {
+    margin-right: 10px;
+    font-weight: bold;
+  }
+}
+
+.filter-btn {
+  padding: 5px 10px;
+  margin: 0 5px;
+  cursor: pointer;
+  border: 0;
+  background-color: light-dark(var(--light-input-bg), var(--dark-input-bg));
+  color: light-dark(var(--light-text), var(--dark-text));
+  transition: background-color 0.2s, border-color 0.2s;
+
+  &:hover {
+    background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+  }
+
+  &.active {
+    background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+    font-weight: bold;
+    border-bottom: 3px solid light-dark(var(--light-border), var(--dark-border));
+  }
+}
+
+/* --- PIN Modal Dialog Styling --- */
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: light-dark(var(--light-bg), var(--dark-bg));
+  margin: auto;
+  padding: 30px;
+  border: 1px solid light-dark(var(--light-border), var(--dark-border));
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  position: relative;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  color: light-dark(var(--light-text), var(--dark-text));
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    color: light-dark(var(--light-text), var(--dark-text));
+    text-decoration: none;
+  }
+}
+
+/* PIN Input Field */
+#pin-input {
+  width: 80%;
+  padding: 12px 20px;
+  margin: 15px 0;
+  display: inline-block;
+  border: 1px solid light-dark(var(--light-input-border), var(--dark-input-border));
+  box-sizing: border-box;
+}
+
+#pin-submit-button {
+  background-color: light-dark(var(--light-input-bg), var(--dark-input-bg));
+  color: light-dark(var(--light-text), var(--dark-text));
+  padding: 14px 20px;
+  border: none;
+  cursor: pointer;
+  width: 80%;
+  font-size: 1em;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: light-dark(var(--light-input-bg-hover), var(--dark-input-bg-hover));
+  }
+}
+
+/* Error Message Styling (for invalid PIN) */
+.error-message {
+  color: light-dark(var(--light-warning), var(--dark-warning));
+  margin-top: 15px;
+  font-size: 0.9em;
+  min-height: 1.2em;
+}
+
+/* --- Timeline Tab Specific Styling --- */
+.chart-container {
+  margin-bottom: 20px;
+}
+
+/* --- Locked State Styling --- */
+body.locked .add-task-container {
+  display: none;
+}
+
+body.locked .task-list-container li input[type="checkbox"],
+body.locked .task-list-container li .delete-button,
+body.locked .task-list-container li .drag-handle {
+  display: none;
+}
+
+/* Adjust padding/margins when controls are hidden */
+body.locked .task-list-container li {
+  padding-left: 10px; /* Adjust as needed if checkbox removal affects alignment */
+}
+
+body.locked .task-list-container li .task-name {
+  margin-left: 0; /* Adjust if checkbox removal affects alignment */
+  cursor: default; /* Prevent text cursor when locked */
+}
+
+body.locked .task-list-container li {
+  cursor: default; /* Disable grab cursor when locked */
+}
