@@ -10,12 +10,34 @@ const taskRoutes = require('./routes/tasks');
 
 // --- App Initialization ---
 const app = express();
+app.set('trust proxy', 'loopback'); //https://expressjs.com/en/guide/behind-proxies.html
 const PORT = process.env.PORT || 4444;
 
 // --- Middleware ---
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      frameSrc: ['*'],
+      frameAncestors: ['*'],
+    }
+  }
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// log requests
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+
+  if (origin) {
+    console.log(`Request Origin: ${origin}`);
+  }
+  if (referer) {
+    console.log(`Request Referer: ${referer}`);
+  }
+  next();
+});
 
 // --- Rate Limiting ---
 const apiLimiter = rateLimit({
