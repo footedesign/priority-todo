@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pinInput = document.getElementById('pin-input');
   const pinSubmitButton = document.getElementById('pin-submit-button');
   const pinError = document.getElementById('pin-error');
-  const pinModalCloseButton = pinModal.querySelector('.close-button');
+  const pinModalCloseButton = document.getElementById('pin-modal-close-button');
   const editLockButton = document.getElementById('edit-lock-button');
   const filterControls = document.querySelector('.filter-controls');
   const filterBtns = document.querySelectorAll('.filter-btn');
@@ -56,18 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
   /**
    * Closes the PIN modal and resets its state.
    */
-  // Make closePinModal globally accessible if called directly from HTML onclick
-  window.closePinModal = () => {
+  const closePinModal = () => {
       pinModal.style.display = 'none';
       pinInput.value = '';
       pinError.textContent = '';
       pinError.style.display = 'none';
       currentPinAction = null;
   };
-  // Ensure the function is available in the global scope if not already
-  if (typeof window.closePinModal === 'undefined') {
-      window.closePinModal = closePinModal;
-  }
 
 
   // --- UI Lock State Management (Simplified - CSS handles most) ---
@@ -753,6 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
           handlePinSubmit();
       }
   });
+
   pinModalCloseButton.addEventListener('click', closePinModal);
   // Close modal if user clicks on the background overlay
   pinModal.addEventListener('click', (event) => {

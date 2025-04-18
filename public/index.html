@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="dark">
+  <meta name="theme-color" content="#191919">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="/img/favicon-48.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
   <title>Priorities</title>
   <link rel="stylesheet" href="style.css">
 
@@ -33,7 +37,7 @@
           <button id="add-task-button">Add Task</button>
         </div>
       </div>
-      <ul id="task-list" class="task-list-container">
+      <ol id="task-list" class="task-list-container">
         <li class="placeholder">Loading tasks...</li>
       </ul>
       <div class="filter-controls">
@@ -52,7 +56,7 @@
 
   <div id="pin-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <span class="close-button" onclick="closePinModal()">&times;</span>
+      <span id="pin-modal-close-button" class="close-button">&times;</span>
       <h2>Unlock Editing</h2>
       <input type="password" id="pin-input" placeholder="PIN">
       <button id="pin-submit-button">Unlock</button>
